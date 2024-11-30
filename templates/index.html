@@ -15,8 +15,11 @@
         </ul>
     </nav>
     <div class="container">
-        <h1>Secondary Disaster Prediction</h1>
-        <form action="/predict" method="POST">
+        <h1>Disaster Prediction Form</h1>
+        {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+        {% endif %}
+        <form method="POST" action="/">
             <label for="duration">Duration of disaster:</label>
             <input type="text" id="duration" name="duration" required>
             <label for="economic_loss">Economic loss (INR):</label>
@@ -25,7 +28,7 @@
             <input type="text" id="deaths" name="deaths" required>
             <label for="affected">People affected:</label>
             <input type="text" id="affected" name="affected" required>
-            <label for="disaster_type">Type of primary disaster:</label>
+            <label for="disaster_type">Disaster Type:</label>
             <select id="disaster_type" name="disaster_type" required>
                 <option value="Flood">Flood</option>
                 <option value="Earthquake">Earthquake</option>
