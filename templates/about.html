@@ -3,27 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>NovAi Background</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #FFEDBC, #6DABE4);
+            background-attachment: fixed;
+            color: #34495e;
+        }
+
+        nav {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.2rem;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 10;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #e74c3c;
+        }
+
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .background {
+            position: relative;
+            width: 100%;
+            height: 100vh; /* Adjusted to fix spacing issues */
+            overflow: hidden;
+        }
+
+        .mountains {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: url(https://images.pexels.com/photos/67517/pexels-photo-67517.jpeg?cs=srgb&dl=landscape-mountains-nature-67517.jpg&fm=jpg) no-repeat bottom center;
+            background-size: cover;
+            opacity: 0.7;
+        }
+
+        
+        
+
+        .about-section {
+            padding: 80px 20px; /* Accounts for the fixed nav bar */
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #2c3e50;
+        }
+
+        p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #34495e;
+        }
+
+        blockquote {
+            font-style: italic;
+            color: #34495e;
+            margin: 20px 0;
+            padding-left: 15px;
+            border-left: 5px solid #e74c3c;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-        </nav>
-    </header>
+    <!-- Navigation Bar -->
+    <nav>
+        <a href="/">Home</a>
+        <a href="#about">About</a>
+    </nav>
 
-    <section class="about-section">
-        <div class="container">
+    <!-- Background Layers -->
+    <div class="background">
+        <div class="mountains"></div>
+        <div class="lines"></div>
+    </div>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div>
             <h1>About Us</h1>
-            <p>Welcome to our disaster prediction service. Our goal is to provide accurate insights into secondary disasters based on primary disaster data. Using state-of-the-art models and real-time data, we aim to help communities prepare and respond to potential disasters.</p>
-            <p>Our platform combines advanced data science with user-friendly tools, offering predictions that can guide mitigation strategies and responses. Thank you for trusting us to assist in disaster preparedness!</p>
+            <p>
+                <span class="highlight">NovAi</span> is an innovative solution designed to combat the unpredictability of 
+                natural disasters by providing <span class="highlight">accurate, real-time predictions</span> and actionable insights. 
+                Leveraging cutting-edge artificial intelligence and data analytics, NovAi addresses both 
+                <span class="highlight">primary calamities</span>, such as heavy rainfall or earthquakes, and <span class="highlight">secondary impacts</span> 
+                like landslides or infrastructural damage. By equipping individuals and authorities with timely information, 
+                our platform helps mitigate loss of life, reduce economic costs, and improve disaster preparedness on a national scale.
+            </p>
+            <blockquote>
+                "Empowering communities to navigate natural disasters with confidence and clarity."
+            </blockquote>
+            <p>
+                Built on advanced AI algorithms, including <span class="highlight">Long Short-Term Memory (LSTM)</span> networks, 
+                NovAi processes and analyzes vast datasets to deliver reliable predictions. Utilizing powerful technologies 
+                like <span class="highlight">Intel Optimized PyTorch</span>, OpenVINO, and Neural Compressor, the platform ensures seamless 
+                performance, even on resource-constrained systems. Beyond predictions, NovAi functions as a 
+                <span class="highlight">web-based public forum</span> for updates and alerts, empowering users to make informed decisions during crises 
+                while fostering a collaborative approach to disaster response.
+            </p>
+            <blockquote>
+                "Turning data into action, and action into safety."
+            </blockquote>
+            <p>
+                Aligned with global sustainability goals, NovAi envisions a future where technology bridges the gap between 
+                safety and resilience. Future enhancements include <span class="highlight">incorporating local languages</span>, 
+                expanding datasets for richer analysis, and integrating with <span class="highlight">existing alert systems</span>. 
+                Our ultimate goal is to become the nation’s most <span class="highlight">reliable alert system</span>, protecting lives, 
+                property, and the environment. NovAi is committed to creating a <span class="highlight">sustainable, resilient future</span> 
+                for communities everywhere.
+            </p>
         </div>
     </section>
 
+    <!-- Footer -->
     <footer>
         <p>&copy; 2024 Disaster Prediction Service. All rights reserved.</p>
     </footer>
 </body>
 </html>
+
