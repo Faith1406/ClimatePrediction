@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Weather Forecast</h1>
+    <form action="/" method="POST">
+        <input type="text" name="city" placeholder="Enter city name" required>
+        <button type="submit">Get Weather</button>
+    </form>
+
+    {% if weather_data %}
+        <h2>Weather in {{ weather_data['name'] }}</h2>
+        <p>Temperature: {{ weather_data['main']['temp'] }}°C</p>
+        <p>Humidity: {{ weather_data['main']['humidity'] }}%</p>
+        <p>Pressure: {{ weather_data['main']['pressure'] }} hPa</p>
+        <p>Wind Speed: {{ weather_data['wind']['speed'] }} m/s</p>
+        <p>Description: {{ weather_data['weather'][0]['description'] }}</p>
+    {% elif error_message %}
+        <p class="error">{{ error_message }}</p>
+    {% endif %}
+</body>
+</html>

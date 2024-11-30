@@ -1,0 +1,11 @@
+[build]
+  base = ""
+  command = "pip install -r requirements.txt && python3 -m flask --app functions.app run"
+  publish = "dist"
+
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
+
+[functions]
+  directory = "functions"
+  included_files = ["requirements.txt"]
