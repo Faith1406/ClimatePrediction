@@ -13,3 +13,4 @@ and make the code more dynamic
 
 and read this documentation for adding some improvements: https://openweathermap.org/api
 
+mo --input_model "open_model\secondary_disaster_model.onnx" --framework onnx --output_dir "open_model"

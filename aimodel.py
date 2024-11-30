@@ -7,6 +7,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 import joblib  # Used for saving preprocessor
+import os  # For creating directories if they don't exist
 
 # Define the model architecture
 class DisasterPredictionModel(nn.Module):
@@ -39,7 +40,7 @@ def preprocess_data(df):
     return X, y, preprocessor
 
 # Load the dataset (adjust path if necessary)
-data = pd.read_csv("synthetic_disaster_data_with_type.csv")
+data = pd.read_csv("datasets/synthetic_disaster_data_with_type.csv")
 
 # Preprocess the data
 X, y, preprocessor = preprocess_data(data)
@@ -74,8 +75,19 @@ for epoch in range(num_epochs):
     # Print loss for every epoch
     print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-# Save the trained model's weights and preprocessor
-torch.save(model.state_dict(), "secondary_disaster_model.pth")  # Save model weights
-joblib.dump(preprocessor, 'preprocessor.pkl')  # Save preprocessor
+# Define the directories where the model and preprocessor will be saved
+model_dir = 'models'
+preprocessor_dir = 'processed_file'
 
-print("Training complete. Model and preprocessor saved.")
+# Ensure the directories exist, create them if necessary
+os.makedirs(model_dir, exist_ok=True)
+os.makedirs(preprocessor_dir, exist_ok=True)
+
+# Save the trained model's weights and preprocessor
+model_save_path = os.path.join(model_dir, 'secondary_disaster_model.pth')
+preprocessor_save_path = os.path.join(preprocessor_dir, 'preprocessor.pkl')
+
+torch.save(model.state_dict(), model_save_path)  # Save model weights
+joblib.dump(preprocessor, preprocessor_save_path)  # Save preprocessor
+
+print(f"Training complete. Model saved to {model_save_path} and preprocessor saved to {preprocessor_save_path}.")

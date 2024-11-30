@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Prediction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('about') }}">About</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <h1>Secondary Disaster Prediction</h1>
+        <form action="/predict" method="POST">
+            <label for="duration">Duration of disaster:</label>
+            <input type="text" id="duration" name="duration" required>
+            <label for="economic_loss">Economic loss (INR):</label>
+            <input type="text" id="economic_loss" name="economic_loss" required>
+            <label for="deaths">Number of deaths:</label>
+            <input type="text" id="deaths" name="deaths" required>
+            <label for="affected">People affected:</label>
+            <input type="text" id="affected" name="affected" required>
+            <label for="disaster_type">Type of primary disaster:</label>
+            <select id="disaster_type" name="disaster_type" required>
+                <option value="Flood">Flood</option>
+                <option value="Earthquake">Earthquake</option>
+                <option value="Cyclone">Cyclone</option>
+                <option value="Landslide">Landslide</option>
+                <option value="Tsunami">Tsunami</option>
+            </select>
+            <label for="region">Region:</label>
+            <select id="region" name="region" required>
+                <option value="North">North</option>
+                <option value="South">South</option>
+                <option value="East">East</option>
+                <option value="West">West</option>
+            </select>
+            <label for="disaster_frequency">Frequency (1-10):</label>
+            <input type="text" id="disaster_frequency" name="disaster_frequency" required>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</body>
+</html>

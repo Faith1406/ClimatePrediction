@@ -1,50 +1,21 @@
-import torch
-import torch.nn as nn
 import pandas as pd
-import joblib  # For loading the preprocessor
 import numpy as np
-from openvino.runtime import Core  # Updated import for OpenVINO
+import joblib
+from openvino.runtime import Core  # Ensure OpenVINO is installed and set up correctly
 
-# Define the model class (ensure this matches the model definition used during training)
-class DisasterPredictionModel(nn.Module):
-    def __init__(self, input_size):
-        super(DisasterPredictionModel, self).__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
-        self.sigmoid = nn.Sigmoid()
+# Load the preprocessor (adjusted path)
+preprocessor = joblib.load('processed_file/preprocessor.pkl')  # Path to preprocessor.pkl
 
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return self.sigmoid(x)
-
-# Load the preprocessor
-preprocessor = joblib.load('preprocessor.pkl')
-
-# Define input size based on preprocessed sample input
-input_size = preprocessor.transform(pd.DataFrame([{
-    'Duration_Days': 0,
-    'Economic_Loss_USD': 0,
-    'Deaths': 0,
-    'Total_Affected': 0,
-    'Primary_Disaster_Type': 'Flood',
-    'Region': 'North',
-    'Disaster_Frequency': 0
-}])).shape[1]
-
-# Load the OpenVINO model using the Core API
+# Load the OpenVINO model using the Core API (adjusted paths for XML and BIN files)
 ie = Core()
 
-# Load the network from IR files (XML and BIN)
-compiled_model = ie.compile_model(model="secondary_disaster_model.xml", device_name="CPU")
+# Load the network from IR files (XML and BIN) stored in the 'open_model/' folder
+compiled_model = ie.compile_model(model="open_model/secondary_disaster_model.xml", device_name="CPU")
 
 # Retrieve input and output information
 input_blob = compiled_model.inputs[0]
 output_blob = compiled_model.outputs[0]
 
-# Prediction function using OpenVINO
 def predict_secondary_disaster(input_df):
     # Preprocess input data
     input_data = preprocessor.transform(input_df)
@@ -57,28 +28,51 @@ def predict_secondary_disaster(input_df):
     # Apply threshold for binary classification
     return "YES" if predicted_label[0] > 0.5 else "NO"
 
-# Function to take user input and make a prediction
-def get_user_input():
-    print("Enter details for secondary disaster prediction:")
+def validate_numeric_input(value, field_name, min_value=None, max_value=None):
+    try:
+        value = float(value)
+        if min_value is not None and value < min_value:
+            return f"Error: {field_name} should be at least {min_value}."
+        if max_value is not None and value > max_value:
+            return f"Error: {field_name} should not exceed {max_value}."
+        return None  # No error
+    except ValueError:
+        return f"Error: {field_name} should be a valid number."
 
-    # Get user inputs for the prediction
-    duration = float(input("Duration of the disaster (in days): "))
-    economic_loss = float(input("Estimated economic loss (in INR): "))
-    deaths = int(input("Number of deaths reported: "))
-    affected = int(input("Total number of affected people: "))
+def validate_text_input(value, field_name, valid_values=None):
+    if not value or (valid_values and value not in valid_values):
+        return f"Error: {field_name} should be a valid option."
+    return None  # No error
 
-    # Adjusted to India-specific disaster types
-    disaster_type = input("Type of primary disaster (e.g., Flood, Earthquake, Cyclone, Landslide): ")
+# Define the run_prediction function that Flask will call
+def run_prediction(duration, economic_loss, deaths, affected, disaster_type, region, disaster_frequency):
+    # Validate inputs
+    error = validate_numeric_input(duration, 'Duration of the disaster', min_value=1)
+    if error:
+        return error
+    error = validate_numeric_input(economic_loss, 'Estimated economic loss', min_value=0)
+    if error:
+        return error
+    error = validate_numeric_input(deaths, 'Number of deaths', min_value=0)
+    if error:
+        return error
+    error = validate_numeric_input(affected, 'Total affected people', min_value=0)
+    if error:
+        return error
+    error = validate_text_input(disaster_type, 'Type of primary disaster', valid_values=['Flood', 'Earthquake', 'Cyclone', 'Landslide', 'Tsunami'])
+    if error:
+        return error
+    error = validate_text_input(region, 'Region', valid_values=['North', 'South', 'East', 'West', 'Central', 'Northeast'])
+    if error:
+        return error
+    error = validate_numeric_input(disaster_frequency, 'Disaster frequency', min_value=1, max_value=10)
+    if error:
+        return error
 
-    # Adjusted to Indian regions
-    region = input("Region (e.g., North, South, East, West, Central, Northeast): ")
-
-    disaster_frequency = int(input("Disaster frequency in the region (on a scale of 1-10): "))
-
-    # Return the inputs in dictionary form for easier DataFrame creation
-    return {
+    # Create input dictionary
+    user_input = {
         'Duration_Days': duration,
-        'Economic_Loss_USD': economic_loss,  # You may consider converting INR to USD if necessary
+        'Economic_Loss_USD': economic_loss,
         'Deaths': deaths,
         'Total_Affected': affected,
         'Primary_Disaster_Type': disaster_type,
@@ -86,18 +80,10 @@ def get_user_input():
         'Disaster_Frequency': disaster_frequency
     }
 
-# Main function to execute the prediction
-def main():
-    # Get user input
-    user_inputs = get_user_input()
+    # Create a DataFrame from user input
+    input_df = pd.DataFrame([user_input])
 
-    # Create DataFrame from user input
-    input_df = pd.DataFrame([user_inputs])
-
-    # Make the prediction using the input data
+    # Get prediction result
     result = predict_secondary_disaster(input_df)
 
-    print(f"Secondary disaster prediction: {result}")
-
-if __name__ == "__main__":
-    main()
+    return result
