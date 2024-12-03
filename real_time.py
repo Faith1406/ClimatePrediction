@@ -1,89 +1,86 @@
-import pandas as pd
-import numpy as np
+from flask import Flask, render_template, request
+import torch
 import joblib
-from openvino.runtime import Core  # Ensure OpenVINO is installed and set up correctly
+import numpy as np
+from aimodel import DisasterPredictionModel  # Assuming the model code is in a file named aimodel.py
 
-# Load the preprocessor (adjusted path)
-preprocessor = joblib.load('processed_file/preprocessor.pkl')  # Path to preprocessor.pkl
+# Create Flask app
+app = Flask(__name__)
 
-# Load the OpenVINO model using the Core API (adjusted paths for XML and BIN files)
-ie = Core()
+# Load the trained model and preprocessing tools
+model_path = "models/disaster_prediction_model.pth"
+scaler_path = "models/scaler.pkl"
+le_type_path = "models/le_type.pkl"
 
-# Load the network from IR files (XML and BIN) stored in the 'open_model/' folder
-compiled_model = ie.compile_model(model="open_model/secondary_disaster_model.xml", device_name="CPU")
+# Load model parameters dynamically (stored in the model or config file)
+input_size = 7  # Number of input features (static, adjust if needed)
+num_classes = 5  # Number of disaster types (static, adjust if needed)
 
-# Retrieve input and output information
-input_blob = compiled_model.inputs[0]
-output_blob = compiled_model.outputs[0]
+# Load model
+model = DisasterPredictionModel(input_size=input_size, num_classes=num_classes)
+model.load_state_dict(torch.load(model_path))
+model.eval()  # Set model to evaluation mode
 
-def predict_secondary_disaster(input_df):
-    # Preprocess input data
-    input_data = preprocessor.transform(input_df)
-    input_data = np.array(input_data, dtype=np.float32)
+# Load scaler and label encoder
+scaler = joblib.load(scaler_path)
+le_type = joblib.load(le_type_path)
 
-    # Perform inference
-    result = compiled_model([input_data])
-    predicted_label = result[output_blob]
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    if request.method == 'POST':
+        try:
+            # Extract input data from the form
+            data = {
+                "Disaster Type": int(request.form['disaster_type']),
+                "Magnitude": float(request.form['magnitude']),
+                "Latitude": float(request.form['latitude']),
+                "Longitude": float(request.form['longitude']),
+                "Duration (Days)": int(request.form['duration']),
+                "Total Deaths": int(request.form['deaths']),
+                "Total Affected": int(request.form['affected'])
+            }
 
-    # Apply threshold for binary classification
-    return "YES" if predicted_label[0] > 0.5 else "NO"
+            # Ensure that all required fields are provided
+            if any(v is None for v in data.values()):
+                raise ValueError("All input fields must be filled out.")
 
-def validate_numeric_input(value, field_name, min_value=None, max_value=None):
-    try:
-        value = float(value)
-        if min_value is not None and value < min_value:
-            return f"Error: {field_name} should be at least {min_value}."
-        if max_value is not None and value > max_value:
-            return f"Error: {field_name} should not exceed {max_value}."
-        return None  # No error
-    except ValueError:
-        return f"Error: {field_name} should be a valid number."
+            # Preprocess the input data
+            input_data = np.array([[data[feature] for feature in data]])
+            input_scaled = scaler.transform(input_data)
+            input_tensor = torch.tensor(input_scaled, dtype=torch.float32)
 
-def validate_text_input(value, field_name, valid_values=None):
-    if not value or (valid_values and value not in valid_values):
-        return f"Error: {field_name} should be a valid option."
-    return None  # No error
+            # Get predictions from the model
+            with torch.no_grad():
+                occur_pred, type_pred, intensity_pred = model(input_tensor)
 
-# Define the run_prediction function that Flask will call
-def run_prediction(duration, economic_loss, deaths, affected, disaster_type, region, disaster_frequency):
-    # Validate inputs
-    error = validate_numeric_input(duration, 'Duration of the disaster', min_value=1)
-    if error:
-        return error
-    error = validate_numeric_input(economic_loss, 'Estimated economic loss', min_value=0)
-    if error:
-        return error
-    error = validate_numeric_input(deaths, 'Number of deaths', min_value=0)
-    if error:
-        return error
-    error = validate_numeric_input(affected, 'Total affected people', min_value=0)
-    if error:
-        return error
-    error = validate_text_input(disaster_type, 'Type of primary disaster', valid_values=['Flood', 'Earthquake', 'Cyclone', 'Landslide', 'Tsunami'])
-    if error:
-        return error
-    error = validate_text_input(region, 'Region', valid_values=['North', 'South', 'East', 'West', 'Central', 'Northeast'])
-    if error:
-        return error
-    error = validate_numeric_input(disaster_frequency, 'Disaster frequency', min_value=1, max_value=10)
-    if error:
-        return error
+            # Decode predictions
+            occur_prob = occur_pred.item()  # Probability of secondary disaster occurrence
+            type_idx = torch.argmax(type_pred, dim=1).item()
+            disaster_type = le_type.inverse_transform([type_idx])[0]
+            intensity = intensity_pred.item()
 
-    # Create input dictionary
-    user_input = {
-        'Duration_Days': duration,
-        'Economic_Loss_USD': economic_loss,
-        'Deaths': deaths,
-        'Total_Affected': affected,
-        'Primary_Disaster_Type': disaster_type,
-        'Region': region,
-        'Disaster_Frequency': disaster_frequency
-    }
+            # Format the result for display
+            result = {
+                "Secondary Disaster Occurred": round(occur_prob, 4),
+                "Secondary Disaster Type": disaster_type,
+                "Secondary Disaster Intensity": round(intensity, 4)
+            }
 
-    # Create a DataFrame from user input
-    input_df = pd.DataFrame([user_input])
+            return render_template('index.html', result=result)
 
-    # Get prediction result
-    result = predict_secondary_disaster(input_df)
+        except ValueError as ve:
+            error = str(ve)
+            return render_template('index.html', error=error)
+        except Exception as e:
+            # Log the error for debugging
+            print(f"Error occurred: {e}")
+            error = "An unexpected error occurred. Please try again."
+            return render_template('index.html', error=error)
 
-    return result
+    return render_template('index.html')
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)

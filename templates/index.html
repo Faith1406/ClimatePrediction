@@ -4,49 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Disaster Prediction</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+    <!-- Navigation Bar -->
     <nav>
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('about') }}">About</a></li>
-        </ul>
+        <a href="/">Home</a>
+        <a href="#about">About</a>
     </nav>
-    <div class="container">
-        <h1>Disaster Prediction Form</h1>
-        {% if error_message %}
-        <p style="color: red;">{{ error_message }}</p>
-        {% endif %}
-        <form method="POST" action="/">
-            <label for="duration">Duration of disaster:</label>
-            <input type="text" id="duration" name="duration" required>
-            <label for="economic_loss">Economic loss (INR):</label>
-            <input type="text" id="economic_loss" name="economic_loss" required>
-            <label for="deaths">Number of deaths:</label>
-            <input type="text" id="deaths" name="deaths" required>
-            <label for="affected">People affected:</label>
-            <input type="text" id="affected" name="affected" required>
-            <label for="disaster_type">Disaster Type:</label>
-            <select id="disaster_type" name="disaster_type" required>
-                <option value="Flood">Flood</option>
-                <option value="Earthquake">Earthquake</option>
-                <option value="Cyclone">Cyclone</option>
-                <option value="Landslide">Landslide</option>
-                <option value="Tsunami">Tsunami</option>
-            </select>
-            <label for="region">Region:</label>
-            <select id="region" name="region" required>
-                <option value="North">North</option>
-                <option value="South">South</option>
-                <option value="East">East</option>
-                <option value="West">West</option>
-            </select>
-            <label for="disaster_frequency">Frequency (1-10):</label>
-            <input type="text" id="disaster_frequency" name="disaster_frequency" required>
-            <button type="submit">Submit</button>
-        </form>
+
+    <!-- Background Layers -->
+    <div class="background">
+        <div class="mountains"></div>
     </div>
+
+    <!-- Form Section -->
+    <section>
+        <h1>Disaster Prediction Model</h1>
+        <form method="POST">
+            <label for="disaster_type">Disaster Type:</label>
+            <select name="disaster_type" required>
+                <option value="">Select Disaster Type</option>
+                <option value="1">Earthquake</option>
+                <option value="2">Flood</option>
+                <option value="3">Hurricane</option>
+                <option value="4">Wildfire</option>
+                <option value="5">Tornado</option>
+            </select><br><br>
+
+            <label for="magnitude">Magnitude:</label>
+            <input type="number" name="magnitude" required><br><br>
+
+            <label for="latitude">Latitude:</label>
+            <input type="number" step="any" name="latitude" required><br><br>
+
+            <label for="longitude">Longitude:</label>
+            <input type="number" step="any" name="longitude" required><br><br>
+
+            <label for="duration">Duration (Days):</label>
+            <input type="number" name="duration" required><br><br>
+
+            <label for="deaths">Total Deaths:</label>
+            <input type="number" name="deaths" required><br><br>
+
+            <label for="affected">Total Affected:</label>
+            <input type="number" name="affected" required><br><br>
+
+            <input type="submit" value="Submit">
+        </form>
+
+        <!-- Display Results -->
+        {% if result %}
+            <div class="result">
+                <h3>Prediction Results:</h3>
+                <p><strong>Secondary Disaster Occurred:</strong> {{ result['Secondary Disaster Occurred'] }}</p>
+                <p><strong>Secondary Disaster Type:</strong> {{ result['Secondary Disaster Type'] }}</p>
+                <p><strong>Secondary Disaster Intensity:</strong> {{ result['Secondary Disaster Intensity'] }}</p>
+            </div>
+        {% elif error %}
+            <div class="error">
+                <h3>Error: {{ error }}</h3>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <h1>About Us</h1>
+        <p>
+            <span class="highlight">NovAi</span> is an innovative solution designed to combat the unpredictability of
+            natural disasters by providing <span class="highlight">accurate, real-time predictions</span> and actionable insights.
+        </p>
+        <blockquote>
+            "Empowering communities to navigate natural disasters with confidence and clarity."
+        </blockquote>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Disaster Prediction Service. All rights reserved.</p>
+    </footer>
 </body>
 </html>

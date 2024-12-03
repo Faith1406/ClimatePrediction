@@ -1,93 +1,55 @@
-/* Global Styles */
 body {
-    font-family: 'Roboto', sans-serif;
-    background-color: #f0f0f0;
     margin: 0;
     padding: 0;
-    color: #333;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #FFEDBC, #6DABE4);
+    background-attachment: fixed;
+    color: #34495e;
 }
 
 nav {
-    background: #333;
-    padding: 15px;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 1000;
-}
-
-nav ul {
+    background: #2c3e50;
+    color: white;
+    padding: 10px 20px;
     display: flex;
-    justify-content: center;
-    list-style-type: none;
+    justify-content: space-around;
+    font-size: 1.2rem;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-nav ul li {
-    margin: 0 20px;
-}
-
-nav ul li a {
+nav a {
     color: white;
     text-decoration: none;
-    font-weight: 500;
-    text-transform: uppercase;
+    transition: color 0.3s;
 }
 
-.container {
-    max-width: 800px;
-    margin: 100px auto;
-    background: white;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+nav a:hover {
+    color: #e74c3c;
 }
 
-h1 {
-    text-align: center;
-    color: #333;
-}
-
-form {
-    display: grid;
-    gap: 20px;
-}
-
-label {
-    font-weight: 500;
-}
-
-input, select, button {
-    padding: 10px;
-    font-size: 16px;
+.background .mountains {
+    position: absolute;
+    bottom: 0;
     width: 100%;
-    border-radius: 5px;
-    border: 1px solid #ddd;
+    height: 100%;
+    background: url(https://images.pexels.com/photos/67517/pexels-photo-67517.jpeg?cs=srgb&dl=landscape-mountains-nature-67517.jpg&fm=jpg) no-repeat bottom center;
+    background-size: cover;
+    opacity: 0.7;
 }
 
-button {
-    background-color: #4CAF50;
+.highlight {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+footer {
+    text-align: center;
+    padding: 10px;
+    background: #2c3e50;
     color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #45a049;
-}
-
-select, input[type="text"] {
-    margin-top: 10px;
-}
-
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
-
-    nav ul {
-        flex-direction: column;
-    }
+    font-size: 0.9rem;
 }

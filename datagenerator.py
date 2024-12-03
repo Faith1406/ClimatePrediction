@@ -1,34 +1,68 @@
-import numpy as np
+import os
 import pandas as pd
-import random
+import numpy as np
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-# Set a seed for reproducibility
-random.seed(42)
-np.random.seed(42)
+# Load the dataset
+file_path = "datasets/unprocessed_dataset.xlsx"  # Replace with your Excel file path
+df = pd.read_excel(file_path)
 
-# Function to generate synthetic disaster data with primary disaster type and region
-def generate_synthetic_data(num_samples=100):
-    disaster_types = ['Flood', 'Earthquake', 'Wildfire', 'Hurricane', 'Tornado']
-    regions = ['Coastal', 'Urban', 'Rural', 'Mountainous', 'Flood-Prone']
+# Display dataset info
+print("Dataset Info:")
+print(df.info())
+print("\nSample Data:")
+print(df.head())
 
-    data = {
-        "Primary_Disaster_Type": [random.choice(disaster_types) for _ in range(num_samples)],
-        "Region": [random.choice(regions) for _ in range(num_samples)],
-        "Duration_Days": [random.randint(1, 30) for _ in range(num_samples)],  # Random duration between 1 and 30 days
-        "Economic_Loss_USD": [random.randint(100000, 5000000) for _ in range(num_samples)],  # Random economic loss between 100k and 5M USD
-        "Deaths": [random.randint(0, 1000) for _ in range(num_samples)],  # Random deaths between 0 and 1000
-        "Total_Affected": [random.randint(100, 10000) for _ in range(num_samples)],  # Random affected population between 100 and 10,000
-        "Disaster_Frequency": [random.randint(1, 10) for _ in range(num_samples)],  # Frequency of disasters in the region (higher = more likely secondary disaster)
-        "label": [random.choice([0, 1]) for _ in range(num_samples)]  # Random label (0 or 1)
-    }
+# Fill missing values
+# Fill numeric columns with the median
+numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns
+df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
 
-    return pd.DataFrame(data)
+# Fill categorical columns with the mode
+categorical_cols = df.select_dtypes(include=["object"]).columns
+df[categorical_cols] = df[categorical_cols].fillna(df[categorical_cols].mode().iloc[0])
 
-# Generate synthetic data
-synthetic_data = generate_synthetic_data(num_samples=50)
+# Feature Engineering
+# Handle missing components in Start and End dates
+df['Start Month'] = df['Start Month'].fillna(1)  # Default missing months to January
+df['Start Day'] = df['Start Day'].fillna(1)      # Default missing days to the first day of the month
+df['End Month'] = df['End Month'].fillna(1)      # Default missing months to January
+df['End Day'] = df['End Day'].fillna(1)          # Default missing days to the first day of the month
 
-# Save to CSV for easy loading (optional)
-synthetic_data.to_csv("synthetic_disaster_data_with_type.csv", index=False)
+# Convert Start and End dates to datetime
+df['Start Date'] = pd.to_datetime(
+    dict(year=df['Start Year'], month=df['Start Month'], day=df['Start Day']),
+    errors='coerce'
+)
+df['End Date'] = pd.to_datetime(
+    dict(year=df['End Year'], month=df['End Month'], day=df['End Day']),
+    errors='coerce'
+)
 
-# Preview the generated data
-print(synthetic_data.head())
+# Calculate duration of disaster in days
+df['Duration (Days)'] = (df['End Date'] - df['Start Date']).dt.days
+df['Duration (Days)'] = df['Duration (Days)'].fillna(0).clip(lower=0)
+
+# Add seasonal feature
+df['Season'] = df['Start Date'].dt.month % 12 // 3 + 1  # 1: Winter, 2: Spring, 3: Summer, 4: Fall
+
+# Encode categorical features
+label_encoders = {}
+for col in ['Disaster Type', 'Disaster Subtype', 'Region', 'Country']:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+    label_encoders[col] = le  # Save encoders for future use
+
+# Normalize numeric features
+scaler = StandardScaler()
+scaled_cols = ['Magnitude', 'Latitude', 'Longitude', 'Duration (Days)', 'Total Deaths', 'Total Affected']
+df[scaled_cols] = scaler.fit_transform(df[scaled_cols])
+
+# Ensure datasets folder exists in the root directory
+os.makedirs("datasets", exist_ok=True)
+
+# Save the preprocessed dataset as CSV
+output_path = os.path.join("datasets", "processed_dataset.csv")
+df.to_csv(output_path, index=False)
+
+print(f"\nData preprocessing complete! Preprocessed dataset saved to {output_path}")

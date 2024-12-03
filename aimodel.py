@@ -1,93 +1,183 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler
-import joblib  # Used for saving preprocessor
-import os  # For creating directories if they don't exist
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+import joblib
+from sklearn.metrics import classification_report
+import os
 
-# Define the model architecture
+# Paths
+dataset_path = "datasets/processed_dataset.csv"
+scaler_path = "models/scaler.pkl"
+encoder_path = "models/le_type.pkl"
+model_path = "models/disaster_prediction_model.pth"
+
+# Load the dataset
+df = pd.read_csv(dataset_path)
+
+# Define features and labels
+features = ['Disaster Type', 'Magnitude', 'Latitude', 'Longitude', 'Duration (Days)', 'Total Deaths', 'Total Affected']
+target_secondary_occur = 'Secondary Disaster Occurred'
+target_secondary_type = 'Secondary Disaster Type'
+target_secondary_intensity = 'Secondary Intensity'
+
+# Generate labels (for demonstration; replace with actual labels)
+np.random.seed(42)
+df[target_secondary_occur] = np.random.choice([0, 1], size=len(df))
+df[target_secondary_type] = np.random.choice(range(5), size=len(df))  # Assuming 5 disaster types
+df[target_secondary_intensity] = np.random.uniform(0, 10, size=len(df))
+
+# Encode features
+scaler = StandardScaler()
+X = scaler.fit_transform(df[features])  # Fit and transform features
+joblib.dump(scaler, scaler_path)        # Save the fitted scaler
+
+# Encode labels
+le_type = LabelEncoder()
+df[target_secondary_type] = le_type.fit_transform(df[target_secondary_type])
+joblib.dump(le_type, encoder_path)      # Save the fitted label encoder
+
+# Prepare data
+y_occur = df[target_secondary_occur].values
+y_type = df[target_secondary_type].values
+y_intensity = df[target_secondary_intensity].values
+
+# Train-test split
+X_train, X_test, y_occur_train, y_occur_test, y_type_train, y_type_test, y_intensity_train, y_intensity_test = train_test_split(
+    X, y_occur, y_type, y_intensity, test_size=0.2, random_state=42
+)
+
+# PyTorch Dataset class
+class DisasterDataset(Dataset):
+    def __init__(self, X, y_occur, y_type, y_intensity):
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y_occur = torch.tensor(y_occur, dtype=torch.float32)
+        self.y_type = torch.tensor(y_type, dtype=torch.long)
+        self.y_intensity = torch.tensor(y_intensity, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y_occur[idx], self.y_type[idx], self.y_intensity[idx]
+
+# Create datasets and dataloaders
+train_dataset = DisasterDataset(X_train, y_occur_train, y_type_train, y_intensity_train)
+test_dataset = DisasterDataset(X_test, y_occur_test, y_type_test, y_intensity_test)
+
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+# Define the model
 class DisasterPredictionModel(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, num_classes):
         super(DisasterPredictionModel, self).__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
-        self.sigmoid = nn.Sigmoid()
+        self.shared_layer = nn.Sequential(
+            nn.Linear(input_size, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        )
+        self.occur_layer = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+            nn.Sigmoid()
+        )
+        self.type_layer = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes),
+            nn.Softmax(dim=1)
+        )
+        self.intensity_layer = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return self.sigmoid(x)
+        shared = self.shared_layer(x)
+        occur = self.occur_layer(shared)
+        type_pred = self.type_layer(shared)
+        intensity = self.intensity_layer(shared)
+        return occur, type_pred, intensity
 
-# Preprocess the data (One-Hot Encoding for categorical variables)
-def preprocess_data(df):
-    categorical_columns = ['Primary_Disaster_Type', 'Region']
-    numerical_columns = ['Duration_Days', 'Economic_Loss_USD', 'Deaths', 'Total_Affected', 'Disaster_Frequency']
+# Instantiate model
+input_size = X.shape[1]
+num_classes = len(le_type.classes_)
+model = DisasterPredictionModel(input_size, num_classes)
 
-    # StandardScaler for numerical features and OneHotEncoder for categorical features
-    preprocessor = ColumnTransformer(
-        transformers=[('num', StandardScaler(), numerical_columns),
-                      ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_columns)
-                     ])
+# Define loss functions and optimizer
+criterion_occur = nn.BCELoss()  # Binary Cross-Entropy
+criterion_type = nn.CrossEntropyLoss()  # Cross-Entropy
+criterion_intensity = nn.MSELoss()  # Mean Squared Error
 
-    X = preprocessor.fit_transform(df)  # Apply transformations
-    y = df['label'].values  # Labels column
-    return X, y, preprocessor
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Load the dataset (adjust path if necessary)
-data = pd.read_csv("datasets/synthetic_disaster_data_with_type.csv")
+# Train the model
+def train_model(model, train_loader, num_epochs=10):
+    model.train()
+    for epoch in range(num_epochs):
+        epoch_loss = 0
+        for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in train_loader:
+            optimizer.zero_grad()
+            occur_pred, type_pred, intensity_pred = model(X_batch)
 
-# Preprocess the data
-X, y, preprocessor = preprocess_data(data)
+            loss_occur = criterion_occur(occur_pred.squeeze(), y_occur_batch)
+            loss_type = criterion_type(type_pred, y_type_batch)
+            loss_intensity = criterion_intensity(intensity_pred.squeeze(), y_intensity_batch)
 
-# Train-test split (80% training, 20% testing)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            total_loss = loss_occur + loss_type + loss_intensity
+            total_loss.backward()
+            optimizer.step()
+            epoch_loss += total_loss.item()
 
-# Create the model
-input_size = X.shape[1]  # This will be the number of features after preprocessing
-model = DisasterPredictionModel(input_size=input_size)
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
 
-# Set up loss function and optimizer
-criterion = nn.BCELoss()  # Binary Cross-Entropy loss for binary classification
-optimizer = optim.Adam(model.parameters(), lr=0.001)  # Adam optimizer with learning rate of 0.001
+# Evaluation function
+def evaluate_model(model, test_loader):
+    model.eval()
+    occur_preds, type_preds, intensity_preds = [], [], []
+    occur_targets, type_targets, intensity_targets = [], [], []
 
-# Training loop
-num_epochs = 10
-for epoch in range(num_epochs):
-    model.train()  # Set the model to training mode
-    inputs = torch.tensor(X_train, dtype=torch.float32)  # Convert to tensor
-    targets = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)  # Convert to tensor and reshape
+    with torch.no_grad():
+        for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in test_loader:
+            occur_pred, type_pred, intensity_pred = model(X_batch)
 
-    # Forward pass
-    outputs = model(inputs)  # Get predictions from the model
-    loss = criterion(outputs, targets)  # Compute the loss
+            occur_preds.append(occur_pred.squeeze().numpy())
+            type_preds.append(type_pred.numpy())
+            intensity_preds.append(intensity_pred.squeeze().numpy())
 
-    # Backward pass
-    optimizer.zero_grad()  # Zero the gradients before the backward pass
-    loss.backward()  # Backpropagate the loss
-    optimizer.step()  # Update the model parameters
+            occur_targets.append(y_occur_batch.numpy())
+            type_targets.append(y_type_batch.numpy())
+            intensity_targets.append(y_intensity_batch.numpy())
 
-    # Print loss for every epoch
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+    # Convert predictions and targets to single arrays
+    occur_preds = np.concatenate(occur_preds) > 0.5
+    type_preds = np.concatenate(type_preds).argmax(axis=1)
+    intensity_preds = np.concatenate(intensity_preds)
 
-# Define the directories where the model and preprocessor will be saved
-model_dir = 'models'
-preprocessor_dir = 'processed_file'
+    occur_targets = np.concatenate(occur_targets)
+    type_targets = np.concatenate(type_targets)
+    intensity_targets = np.concatenate(intensity_targets)
 
-# Ensure the directories exist, create them if necessary
-os.makedirs(model_dir, exist_ok=True)
-os.makedirs(preprocessor_dir, exist_ok=True)
+    print("Binary Classification Report (Secondary Disaster Occurrence):")
+    print(classification_report(occur_targets, occur_preds))
 
-# Save the trained model's weights and preprocessor
-model_save_path = os.path.join(model_dir, 'secondary_disaster_model.pth')
-preprocessor_save_path = os.path.join(preprocessor_dir, 'preprocessor.pkl')
+    print("\nMulti-class Classification Report (Secondary Disaster Type):")
+    print(classification_report(type_targets, type_preds))
 
-torch.save(model.state_dict(), model_save_path)  # Save model weights
-joblib.dump(preprocessor, preprocessor_save_path)  # Save preprocessor
+    mse = np.mean((intensity_targets - intensity_preds) ** 2)
+    print(f"\nMean Squared Error (Secondary Intensity): {mse:.4f}")
 
-print(f"Training complete. Model saved to {model_save_path} and preprocessor saved to {preprocessor_save_path}.")
+# Train and save the model
+train_model(model, train_loader, num_epochs=200)
+torch.save(model.state_dict(), model_path)
+print(f"\nModel training complete! Model saved to {model_path}")
+
+# Evaluate the model
+evaluate_model(model, test_loader)
