@@ -46,6 +46,22 @@ The system uses a machine learning model trained on historical disaster data and
 
 ---
 
+# How to Test the Disaster Prediction Model
+
+To test the disaster prediction model, we provide a `real_time.py` script. This script processes real-time input data, utilizes the trained LSTM model, and outputs predictions for secondary disaster occurrence, type, and intensity.
+
+---
+
+## Prerequisites
+Before running the script, ensure the following:
+1. The trained model (`disaster_prediction_model.pth`) is available in the `models` directory.
+2. The necessary preprocessing tools (`scaler.pkl` and `le_type.pkl`) are also in the `models` directory.
+3. The required Python dependencies are installed:
+   ```bash
+   pip install -r requirements.txt
+   ```
+---
+
 ## Model
 
 The model uses a Long Short-Term Memory (LSTM) architecture to effectively handle sequential features in disaster data. The architecture includes:  
