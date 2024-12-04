@@ -1,5 +1,5 @@
 
-# Nova AI
+# NovAI
 
 ## Overview
 
