@@ -64,11 +64,11 @@ Before running the script, ensure the following:
 
 ## Model
 
-The model uses a Long Short-Term Memory (LSTM) architecture to effectively handle sequential features in disaster data. The architecture includes:  
+The model uses a Long Short-Term Memory (LSTM) architecture to effectively handle sequential features in disaster data. The architecture includes:
 
-- **Shared LSTM Layer**: Captures sequential dependencies and extracts features relevant to all three outputs.  
-- **Secondary Disaster Occurrence**: A binary classification output for whether a secondary disaster occurred.  
-- **Secondary Disaster Type**: A multi-class classification output for the type of secondary disaster.  
+- **Shared LSTM Layer**: Captures sequential dependencies and extracts features relevant to all three outputs.
+- **Secondary Disaster Occurrence**: A binary classification output for whether a secondary disaster occurred.
+- **Secondary Disaster Type**: A multi-class classification output for the type of secondary disaster.
 - **Secondary Intensity**: A regression output predicting the intensity of the secondary disaster.
 
 The model is trained using the following loss functions:
@@ -218,7 +218,7 @@ This will export the model to the open_model/ folder in the ONNX format
 ### Acknowledgments
 
 - Inspired by real-world disaster prediction research and machine learning applications.
-- **PyTorch**, **LSTM**, **Intel AI Toolkit**, and **Scikit-learn** for their powerful tools in building and training models.  
+- **PyTorch**, **LSTM**, **Intel AI Toolkit**, and **Scikit-learn** for their powerful tools in building and training models.
 - **Flask** for easy deployment of the web application.
 
 ---
