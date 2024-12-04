@@ -117,79 +117,69 @@ num_classes = len(le_type.classes_)
 # Create the model instance
 model = DisasterPredictionModelWithLSTM(input_size, num_classes)
 
-# Loss functions
-loss_fn_occur = nn.BCELoss()  # Binary Cross-Entropy for occurrence
-loss_fn_type = nn.CrossEntropyLoss()  # Cross-Entropy Loss for type classification
-loss_fn_intensity = nn.MSELoss()  # Mean Squared Error for intensity prediction
-
-# Optimizer
+# Define loss functions and optimizer
+criterion_occur = nn.BCELoss()
+criterion_type = nn.CrossEntropyLoss()
+criterion_intensity = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Training Loop
+# Training the model
 num_epochs = 10
 for epoch in range(num_epochs):
     model.train()
-    total_loss = 0
-
+    running_loss = 0.0
     for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in train_loader:
         optimizer.zero_grad()
 
         # Forward pass
         occur_pred, type_pred, intensity_pred = model(X_batch)
 
-        # Compute the losses
-        loss_occur = loss_fn_occur(occur_pred.squeeze(), y_occur_batch)
-        loss_type = loss_fn_type(type_pred, y_type_batch)
-        loss_intensity = loss_fn_intensity(intensity_pred.squeeze(), y_intensity_batch)
+        # Calculate losses
+        loss_occur = criterion_occur(occur_pred.squeeze(), y_occur_batch)
+        loss_type = criterion_type(type_pred, y_type_batch)
+        loss_intensity = criterion_intensity(intensity_pred.squeeze(), y_intensity_batch)
 
-        # Total loss
+        # Backward pass
         loss = loss_occur + loss_type + loss_intensity
-        total_loss += loss.item()
-
-        # Backward pass and optimization
         loss.backward()
         optimizer.step()
 
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss/len(train_loader):.4f}")
+        running_loss += loss.item()
 
-# Save the model
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(train_loader)}")
+
+# Save the model after training
 torch.save(model.state_dict(), model_path)
 
-# After training, evaluate the model
-def evaluate_model(model, test_loader):
-    model.eval()
-    occur_preds, type_preds, intensity_preds = [], [], []
-    occur_targets, type_targets, intensity_targets = [], [], []
+# Evaluate the model on the test set
+model.eval()
+with torch.no_grad():
+    y_pred_occur = []
+    y_pred_type = []
+    y_pred_intensity = []
+    y_true_occur = []
+    y_true_type = []
+    y_true_intensity = []
+    for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in test_loader:
+        occur_pred, type_pred, intensity_pred = model(X_batch)
+        y_pred_occur.append(occur_pred.squeeze().numpy())
+        y_pred_type.append(type_pred.argmax(dim=1).numpy())
+        y_pred_intensity.append(intensity_pred.squeeze().numpy())
+        y_true_occur.append(y_occur_batch.numpy())
+        y_true_type.append(y_type_batch.numpy())
+        y_true_intensity.append(y_intensity_batch.numpy())
 
-    with torch.no_grad():
-        for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in test_loader:
-            occur_pred, type_pred, intensity_pred = model(X_batch)
+# Flatten the lists
+y_pred_occur = np.concatenate(y_pred_occur)
+y_pred_type = np.concatenate(y_pred_type)
+y_pred_intensity = np.concatenate(y_pred_intensity)
+y_true_occur = np.concatenate(y_true_occur)
+y_true_type = np.concatenate(y_true_type)
+y_true_intensity = np.concatenate(y_true_intensity)
 
-            occur_preds.append(occur_pred.squeeze().numpy())
-            type_preds.append(type_pred.numpy())
-            intensity_preds.append(intensity_pred.squeeze().numpy())
+# Print classification report for type prediction
+print("Classification Report (Type Prediction):")
+print(classification_report(y_true_type, y_pred_type))
 
-            occur_targets.append(y_occur_batch.numpy())
-            type_targets.append(y_type_batch.numpy())
-            intensity_targets.append(y_intensity_batch.numpy())
-
-    # Convert predictions and targets to single arrays
-    occur_preds = np.concatenate(occur_preds) > 0.5
-    type_preds = np.concatenate(type_preds).argmax(axis=1)
-    intensity_preds = np.concatenate(intensity_preds)
-
-    occur_targets = np.concatenate(occur_targets)
-    type_targets = np.concatenate(type_targets)
-    intensity_targets = np.concatenate(intensity_targets)
-
-    print("Binary Classification Report (Secondary Disaster Occurrence):")
-    print(classification_report(occur_targets, occur_preds))
-
-    print("\nMulti-class Classification Report (Secondary Disaster Type):")
-    print(classification_report(type_targets, type_preds))
-
-    mse = np.mean((intensity_targets - intensity_preds) ** 2)
-    print(f"\nMean Squared Error (Secondary Intensity): {mse:.4f}")
-
-# Call the evaluation function
-evaluate_model(model, test_loader)
+# Print mean squared error for intensity prediction
+print(f"Mean Squared Error (Intensity Prediction): {np.mean((y_pred_intensity - y_true_intensity) ** 2)}")
