@@ -138,7 +138,7 @@ This makes LSTMs a more robust choice for handling real-world disaster data comp
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Faith1014/NovaAI.git
+git clone https://github.com/Faith1406/NovAI.git
 cd NovAI
 ```
 
