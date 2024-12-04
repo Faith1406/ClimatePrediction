@@ -66,7 +66,7 @@ The model is trained using the following loss functions:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/disaster-prediction.git
+git clone https://github.com/Faith1014/NovAI.git
 cd disaster-prediction
 ```
 
