@@ -72,12 +72,13 @@ test_dataset = DisasterDataset(X_test, y_occur_test, y_type_test, y_intensity_te
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-# Define the model
-class DisasterPredictionModel(nn.Module):
-    def __init__(self, input_size, num_classes):
-        super(DisasterPredictionModel, self).__init__()
+# Define the model with LSTM
+class DisasterPredictionModelWithLSTM(nn.Module):
+    def __init__(self, input_size, num_classes, hidden_size=64, num_layers=2):
+        super(DisasterPredictionModelWithLSTM, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.3)
         self.shared_layer = nn.Sequential(
-            nn.Linear(input_size, 128),
+            nn.Linear(hidden_size, 128),
             nn.ReLU(),
             nn.Dropout(0.3)
         )
@@ -100,45 +101,61 @@ class DisasterPredictionModel(nn.Module):
         )
 
     def forward(self, x):
-        shared = self.shared_layer(x)
+        # Add a sequence dimension for LSTM
+        x = x.unsqueeze(1)  # Add sequence length = 1
+        lstm_out, _ = self.lstm(x)
+        shared = self.shared_layer(lstm_out[:, -1, :])  # Use the last hidden state
         occur = self.occur_layer(shared)
         type_pred = self.type_layer(shared)
         intensity = self.intensity_layer(shared)
         return occur, type_pred, intensity
 
-# Instantiate model
+# Instantiate the model
 input_size = X.shape[1]
 num_classes = len(le_type.classes_)
-model = DisasterPredictionModel(input_size, num_classes)
 
-# Define loss functions and optimizer
-criterion_occur = nn.BCELoss()  # Binary Cross-Entropy
-criterion_type = nn.CrossEntropyLoss()  # Cross-Entropy
-criterion_intensity = nn.MSELoss()  # Mean Squared Error
+# Create the model instance
+model = DisasterPredictionModelWithLSTM(input_size, num_classes)
 
+# Loss functions
+loss_fn_occur = nn.BCELoss()  # Binary Cross-Entropy for occurrence
+loss_fn_type = nn.CrossEntropyLoss()  # Cross-Entropy Loss for type classification
+loss_fn_intensity = nn.MSELoss()  # Mean Squared Error for intensity prediction
+
+# Optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Train the model
-def train_model(model, train_loader, num_epochs=10):
+# Training Loop
+num_epochs = 10
+for epoch in range(num_epochs):
     model.train()
-    for epoch in range(num_epochs):
-        epoch_loss = 0
-        for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in train_loader:
-            optimizer.zero_grad()
-            occur_pred, type_pred, intensity_pred = model(X_batch)
+    total_loss = 0
 
-            loss_occur = criterion_occur(occur_pred.squeeze(), y_occur_batch)
-            loss_type = criterion_type(type_pred, y_type_batch)
-            loss_intensity = criterion_intensity(intensity_pred.squeeze(), y_intensity_batch)
+    for X_batch, y_occur_batch, y_type_batch, y_intensity_batch in train_loader:
+        optimizer.zero_grad()
 
-            total_loss = loss_occur + loss_type + loss_intensity
-            total_loss.backward()
-            optimizer.step()
-            epoch_loss += total_loss.item()
+        # Forward pass
+        occur_pred, type_pred, intensity_pred = model(X_batch)
 
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
+        # Compute the losses
+        loss_occur = loss_fn_occur(occur_pred.squeeze(), y_occur_batch)
+        loss_type = loss_fn_type(type_pred, y_type_batch)
+        loss_intensity = loss_fn_intensity(intensity_pred.squeeze(), y_intensity_batch)
 
-# Evaluation function
+        # Total loss
+        loss = loss_occur + loss_type + loss_intensity
+        total_loss += loss.item()
+
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+
+    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss/len(train_loader):.4f}")
+
+# Save the model
+torch.save(model.state_dict(), model_path)
+
+# After training, evaluate the model
 def evaluate_model(model, test_loader):
     model.eval()
     occur_preds, type_preds, intensity_preds = [], [], []
@@ -174,10 +191,5 @@ def evaluate_model(model, test_loader):
     mse = np.mean((intensity_targets - intensity_preds) ** 2)
     print(f"\nMean Squared Error (Secondary Intensity): {mse:.4f}")
 
-# Train and save the model
-train_model(model, train_loader, num_epochs=200)
-torch.save(model.state_dict(), model_path)
-print(f"\nModel training complete! Model saved to {model_path}")
-
-# Evaluate the model
+# Call the evaluation function
 evaluate_model(model, test_loader)

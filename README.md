@@ -1,4 +1,5 @@
-# NovAI
+
+# Nova AI
 
 ## Overview
 
@@ -26,8 +27,6 @@ The system uses a machine learning model trained on historical disaster data and
 
 - **Python**: Core language for development.
 - **PyTorch**: Deep learning framework for model training and inference.
-- **LSTM (Long Short-Term Memory)**: A type of recurrent neural network used for sequential data modeling.
-- **Intel AI Analytics Toolkit**: Optimized libraries to accelerate PyTorch performance.
 - **Scikit-learn**: For data preprocessing and machine learning utilities.
 - **Flask**: Lightweight web framework for serving the model.
 - **Pandas and NumPy**: For data manipulation and numerical computations.
@@ -39,36 +38,19 @@ The system uses a machine learning model trained on historical disaster data and
 ## Features
 
 - **Data Preprocessing**: The data is cleaned, transformed, and scaled to be fed into the machine learning model.
-- **LSTM-Based Model**: The core architecture leverages LSTM layers to capture sequential dependencies in disaster data, particularly for predicting secondary disaster outcomes.
-- **Intel AI Toolkit Optimization**: The model is optimized for better performance using Intel’s AI Toolkit for PyTorch.
+- **Model Training**: The model is trained using PyTorch and consists of three distinct layers for predicting the occurrence, type, and intensity of secondary disasters.
 - **Flask Web Interface**: A web interface for predicting outcomes based on user input.
 - **Model Export**: The model is exported to the ONNX format for easy deployment on different platforms.
 
 ---
 
-# How to Test the Disaster Prediction Model
-
-To test the disaster prediction model, we provide a `real_time.py` script. This script processes real-time input data, utilizes the trained LSTM model, and outputs predictions for secondary disaster occurrence, type, and intensity.
-
----
-
-## Prerequisites
-Before running the script, ensure the following:
-1. The trained model (`disaster_prediction_model.pth`) is available in the `models` directory.
-2. The necessary preprocessing tools (`scaler.pkl` and `le_type.pkl`) are also in the `models` directory.
-3. The required Python dependencies are installed:
-   ```bash
-   pip install -r requirements.txt
-   ```
----
-
 ## Model
 
-The model uses a Long Short-Term Memory (LSTM) architecture to effectively handle sequential features in disaster data. The architecture includes:  
+The model is built using a multi-task learning approach to predict three outcomes simultaneously. The architecture consists of:
 
-- **Shared LSTM Layer**: Captures sequential dependencies and extracts features relevant to all three outputs.  
-- **Secondary Disaster Occurrence**: A binary classification output for whether a secondary disaster occurred.  
-- **Secondary Disaster Type**: A multi-class classification output for the type of secondary disaster.  
+- **Shared Layer**: A fully connected layer to process common features.
+- **Secondary Disaster Occurrence**: A binary classification output for whether a secondary disaster occurred.
+- **Secondary Disaster Type**: A multi-class classification output for the type of secondary disaster.
 - **Secondary Intensity**: A regression output predicting the intensity of the secondary disaster.
 
 The model is trained using the following loss functions:
@@ -79,67 +61,13 @@ The model is trained using the following loss functions:
 
 ---
 
-# Why Use LSTM for Disaster Prediction?
-
-In this project, we utilize a Long Short-Term Memory (LSTM) model to predict secondary disasters, including their occurrence, type, and intensity. Below, we explain why LSTMs were chosen for this project and how they outperform other models like feedforward neural networks (FNN) or simpler machine learning algorithms.
-
----
-
-## 1. Sequential Data Handling
-Disaster data often involves temporal or sequential relationships. For example:
-- Changes in magnitudes, locations, or duration might indicate patterns leading to secondary disasters.
-- Historical disaster data may contain trends that are important for predictions.
-
-LSTMs excel in capturing these **time-dependent relationships** because they are designed to handle sequential data through memory cells and gates, allowing them to retain relevant past information while ignoring irrelevant data.
-
----
-
-## 2. Feature Interactions Over Time
-Unlike traditional models like FNNs, which process data independently for each instance, LSTMs can learn **dynamic interactions between features over time**, such as:
-- How disaster magnitude correlates with affected populations over time.
-- How geospatial features (latitude and longitude) interact with other variables like duration and total deaths.
-
-These interactions are crucial in predicting secondary disasters more accurately.
-
----
-
-## 3. Advantages Over Feedforward Neural Networks
-| **Criteria**               | **LSTM**                                | **FNN**                                |
-|-----------------------------|-----------------------------------------|----------------------------------------|
-| **Captures Temporal Patterns** | ✅ Yes                                 | ❌ No                                  |
-| **Handles Sequential Data**     | ✅ Yes                                 | ❌ No                                  |
-| **Dynamic Feature Interactions**| ✅ Excellent                          | ❌ Limited                             |
-| **Memory Mechanism**        | ✅ Retains important information        | ❌ No memory of previous states        |
-
-While FNNs are simpler and faster, they are insufficient for datasets where the sequence of events or time-dependent features play a critical role in predictions.
-
----
-
-## 4. Robustness in Modeling Complex Patterns
-Disaster data is inherently complex. LSTMs handle this by:
-- Storing long-term dependencies for recurring patterns (e.g., seasonal disaster trends).
-- Forgetting irrelevant details through their gating mechanisms.
-- Adapting to irregularities in the data without relying solely on feature engineering.
-
-This makes LSTMs a more robust choice for handling real-world disaster data compared to simpler models like decision trees, support vector machines (SVMs), or even FNNs.
-
----
-
-## 5. Considerations
-### Why Not Other Models?
-- **Decision Trees/Random Forests**: These models are not suited for capturing sequential or temporal dependencies in the data.
-- **Support Vector Machines (SVMs)**: SVMs are limited to static data and can’t efficiently handle large-scale or sequential datasets.
-- **Transformers**: While powerful, transformers are computationally expensive and might be overkill for smaller disaster datasets. LSTMs strike the right balance between performance and computational efficiency.
-
----
-
 ## Installation
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/NovaAI.git
-cd NovAI
+git clone https://github.com/yourusername/disaster-prediction.git
+cd disaster-prediction
 ```
 
 ### Dataset
@@ -153,7 +81,7 @@ Ensure the processed dataset `processed_dataset.csv` is available in the `datase
 To run the Flask web app, use the following command:
 
 ```bash
-python real_time.py
+python flask_app/app.py
 ```
 This will start a local web server, and the application will be available at http://127.0.0.1:5000.
 
@@ -161,24 +89,22 @@ This will start a local web server, and the application will be available at htt
 
 ### Training the Model
 
-To train the model with the LSTM architecture:
+To train the model:
 
 ```bash
-python aimodel.py
+python scripts/train.py
 ```
 
 This script will train the model using the dataset and save the trained model to the models/ folder.
-The training process is optimized using Intel’s AI Toolkit if installed.
 
 ---
 
 ### Evaluation
 
 To evaluate the model on the test set:
-It is included in the aimodel script
 
 ```bash
-python aimodel.py
+python scripts/evaluate.py
 ```
 
 This will print out classification reports and the Mean Squared Error for intensity predictions.
@@ -208,7 +134,7 @@ The Flask application allows you to input disaster data and predict the likeliho
 To export the trained model to the ONNX format for deployment:
 
 ```bash
-python converter.py
+python scripts/export_onnx.py
 ```
 
 This will export the model to the open_model/ folder in the ONNX format
@@ -217,8 +143,8 @@ This will export the model to the open_model/ folder in the ONNX format
 
 ### Acknowledgments
 
-- Inspired by real-world disaster prediction research and machine learning applications.
-- **PyTorch**, **LSTM**, **Intel AI Toolkit**, and **Scikit-learn** for their powerful tools in building and training models.  
+- Inspired by real-world disaster prediction research and machine learning applications.  
+- **PyTorch** and **Scikit-learn** for their powerful tools in building and training models.  
 - **Flask** for easy deployment of the web application.
 
 ---
