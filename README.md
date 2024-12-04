@@ -17,7 +17,7 @@ The system uses a machine learning model trained on historical disaster data and
 - `datasets/`: Folder containing the processed datasets.
 - `models/`: Folder containing the trained models, scalers, and encoders.
 - `scripts/`: Python scripts for model training, evaluation, and inference.
-- `flask_app/`: Flask-based web application for serving the model.
+- `flaskapp/`: Flask-based web application for serving the model.
 - `README.md`: This file.
 
 ---
