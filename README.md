@@ -209,6 +209,7 @@ To export the trained model to the ONNX format for deployment:
 
 ```bash
 python converter.py
+mo --input_model models/disaster_prediction_model.onnx --framework onnx --output_dir models/ --data_type FP16
 ```
 
 This will export the model to the open_model/ folder in the ONNX format

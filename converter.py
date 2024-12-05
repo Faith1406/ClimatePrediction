@@ -1,37 +1,44 @@
 import torch
-import torch.onnx
+import torch.nn as nn
 import joblib
-import os
-from aimodel import DisasterPredictionModel  # Ensure this is the correct model class
+import numpy as np
+from aimodel import DisasterPredictionModelWithLSTM  # Assuming model class in separate file
 
-# Load the preprocessor (make sure it's correct)
-preprocessor = joblib.load('processed_file/preprocessor.pkl')  # Adjust path if needed
+# Paths
+scaler_path = "models/scaler.pkl"
+encoder_path = "models/le_type.pkl"
+model_path = "models/disaster_prediction_model.pth"
+onnx_path = "open_model/disaster_prediction_model.onnx"
 
-# Initialize the model with the correct input size (assuming 15 features in the input)
-model = DisasterPredictionModel(input_size=15)  # Ensure this is the correct input size
+# Load the scaler and encoder
+scaler = joblib.load(scaler_path)
+le_type = joblib.load(encoder_path)
+num_classes = len(le_type.classes_)
 
-# Load the trained model weights (ensure the model path is correct)
-model_weights_path = "models/disaster_prediction_model.pth"
+# Define the model structure
+input_size = scaler.mean_.shape[0]  # Number of input features
+model = DisasterPredictionModelWithLSTM(input_size=input_size, num_classes=num_classes)
 
-# Make sure that the model path exists
-if os.path.exists(model_weights_path):
-    model.load_state_dict(torch.load(model_weights_path))  # Load the saved weights into the model
-else:
-    raise FileNotFoundError(f"Model weights file not found at: {model_weights_path}")
-
+# Load the trained model weights
+model.load_state_dict(torch.load(model_path))
 model.eval()  # Set the model to evaluation mode
 
-# Create a dummy input tensor with 15 features for the forward pass (make sure it's the correct size)
-dummy_input = torch.randn(1, 15)  # Assuming the model expects 15 features
+# Create a dummy input tensor (shape: batch_size x input_size)
+batch_size = 1  # You can adjust this as needed
+dummy_input = torch.randn(batch_size, input_size, dtype=torch.float32)
 
-# Ensure the output directory exists for saving the ONNX model
-output_dir = 'open_model'
-os.makedirs(output_dir, exist_ok=True)
+# Export the model to ONNX
+torch.onnx.export(
+    model,
+    dummy_input,
+    onnx_path,
+    export_params=True,  # Store trained parameter weights
+    opset_version=11,    # Use a compatible ONNX opset
+    do_constant_folding=True,  # Optimize the model graph
+    input_names=['input'],     # Name of the input layer
+    output_names=['occur_output', 'type_output', 'intensity_output'],  # Names of the output layers
+    dynamic_axes={'input': {0: 'batch_size'}, 'occur_output': {0: 'batch_size'},
+                  'type_output': {0: 'batch_size'}, 'intensity_output': {0: 'batch_size'}}  # Allow dynamic batch sizes
+)
 
-# Define the ONNX model output path
-onnx_model_path = os.path.join(output_dir, "secondary_disaster_model.onnx")
-
-# Export the model to ONNX format
-torch.onnx.export(model, dummy_input, onnx_model_path, opset_version=11)  # You can change opset_version if needed
-
-print(f"Model successfully exported to ONNX format and saved at: {onnx_model_path}")
+print(f"Model successfully exported to {onnx_path}")
